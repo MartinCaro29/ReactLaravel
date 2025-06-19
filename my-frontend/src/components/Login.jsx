@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap';
 
-import axios from 'axios';
+
 import { useNavigate } from 'react-router-dom';
 import AuthLogo from '../images/dreamestatelogoauth.png';
 import './Auth.css';
+import api from '../api';
 
 const Login = () => {
 
@@ -57,14 +58,14 @@ const Login = () => {
 
         try {
             // First get CSRF cookie (required by Sanctum)
-            await axios.get('http://localhost:8000/sanctum/csrf-cookie', {
+            await api.get('http://localhost:8000/sanctum/csrf-cookie', {
                 withCredentials: true,
             });
 
             // Then perform login
-            const response = await axios.post(
+            const response = await api.post(
                 'http://localhost:8000/api/login',
-                { email: userLog.email, password: userLog.password },
+                { email: userLog.email, password: userLog.password, remember: rememberMe },
                 { withCredentials: true }
             );
 
@@ -94,7 +95,9 @@ const Login = () => {
         setIsVerifying(true);
 
         try {
-            const response = await axios.post('http://localhost:8000/api/verify-email', {
+
+
+            const response = await api.post('http://localhost:8000/api/verify-email', {
                 email: userLog.email,
                 token: verificationCode,
             });
@@ -123,7 +126,7 @@ const Login = () => {
 
     const handleResendCode = async () => {
         try {
-            await axios.post('http://localhost:8000/api/resend-verification', { email: userLog.email });
+            await api.post('http://localhost:8000/api/resend-verification', { email: userLog.email });
             setResendSuccess('Kodi i verifikimit u ridërgua me sukses!');
             setCountdown(10);
             setTimeout(() => setResendSuccess(''), 3000);
@@ -202,7 +205,7 @@ const Login = () => {
                                     </p>
                                     <p className="text-center mt-3">
                                         Harruat fjalekalimin?{' '}
-                                        <a href="/ndryshofjalekalimin" className="text-decoration-none auth-link">
+                                        <a href="/forgotpassword" className="text-decoration-none auth-link">
                                             Vazhdoni ketu
                                         </a>
                                     </p>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap';
-import axios from 'axios';
+
 import { useNavigate } from 'react-router-dom';
 import AuthLogo from '../images/dreamestatelogoauth.png';
 import './Auth.css';
+import api from '../api';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -25,6 +26,7 @@ const Register = () => {
     const [countdown, setCountdown] = useState(0);
     const [resendSuccess, setResendSuccess] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
+    const [agreedTerms, setAgreedTerms] = useState(false);
     useEffect(() => {
         let timer;
         if (countdown > 0) {
@@ -37,7 +39,7 @@ const Register = () => {
 
     const handleResendCode = async () => {
         try {
-            await axios.post('http://localhost:8000/api/resend-verification', {
+            await api.post('http://localhost:8000/api/resend-verification', {
                 email: newUser.email,
             });
             setResendSuccess('Kodi i verifikimit u ridërgua me sukses!');
@@ -76,6 +78,11 @@ const Register = () => {
 
     const handleRegister = async (e) => {
         e.preventDefault();
+
+        if(!agreedTerms) {
+            handleError("Ju lutemi pranoni kushtet e shërbimit për të vazhduar.");
+            return;
+        }
         if (!newUser.name || !newUser.email || !newUser.password || !newUser.confirmPassword) {
             handleError('Të gjitha fushat janë të detyrueshme');
             return;
@@ -91,7 +98,13 @@ const Register = () => {
         }
 
         try {
-            await axios.post('http://localhost:8000/api/register', {
+
+            // First get CSRF cookie (required by Sanctum)
+            await api.get('http://localhost:8000/sanctum/csrf-cookie', {
+                withCredentials: true,
+            });
+
+            await api.post('http://localhost:8000/api/register', {
                 name: newUser.name,
                 email: newUser.email,
                 password: newUser.password
@@ -113,7 +126,7 @@ const Register = () => {
         setIsVerifying(true);
 
         try {
-            await axios.post('http://localhost:8000/api/verify-email', {
+            await api.post('http://localhost:8000/api/verify-email', {
                 email: newUser.email,
                 token: verificationCode
             });
@@ -219,6 +232,16 @@ const Register = () => {
                                         />
                                     </Form.Group>
 
+                                    <Form.Group className="mb-4">
+                                        <Form.Check
+                                            type="checkbox"
+                                            id="agree-terms"
+                                            label="Une pranoj kushtet e shërbimit"
+                                            onChange={() => setAgreedTerms(!agreedTerms)}
+                                            checked={agreedTerms}
+                                        />
+                                    </Form.Group>
+
                                     <div className="d-grid gap-2">
                                         <Button variant="primary" type="submit" size="lg">
                                             Regjistrohu
@@ -232,7 +255,7 @@ const Register = () => {
                                     </p>
                                     <p className="text-center mt-3">
                                         Harruat fjalekalimin?{' '}
-                                        <a href="/ndryshofjalekalimin" className="text-decoration-none auth-link">
+                                        <a href="/forgotpassword" className="text-decoration-none auth-link">
                                             Vazhdoni ketu
                                         </a>
                                     </p>

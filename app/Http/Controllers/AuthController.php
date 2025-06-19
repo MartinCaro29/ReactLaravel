@@ -234,7 +234,6 @@ class AuthController extends Controller
                 ]
             );
 
-            // Use the new private method to send email (normal send, not resend)
             $this->sendVerificationEmail($user, $code, false);
 
             return response()->json([
@@ -243,34 +242,43 @@ class AuthController extends Controller
             ], 200);
         }
 
-        // Log in the user via session
-        Auth::login($user);
+        // For Sanctum stateful authentication, use attempt instead of Auth::login
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password,], $request->remember)) {
+            $request->session()->regenerate();
 
-        // Return user data only, no token
-        return response()->json([
-            'user' => $user,
-        ]);
+            return response()->json([
+                'user' => Auth::user(),
+            ]);
+        }
+
+        return response()->json(['error' => 'Authentication failed'], 401);
     }
 
 
 
     public function logout(Request $request)
     {
-        // Revoke all tokens or logout the user (depends on your app)
-        auth()->logout();
+        // Log out the user - this clears the authentication
+        auth()->guard('web')->logout();
 
+        // Invalidate the session
+        $request->session()->invalidate();
 
+        // Regenerate the CSRF token
+        $request->session()->regenerateToken();
 
-        // Return response that clears Laravel session cookie by setting it expired
-        return response()->json(['message' => 'Logged out successfully'])
-            ->withCookie(cookie()->forget('laravel_session'))
-            ->withCookie(cookie()->forget('XSRF-TOKEN'));
+        return response()->json(['message' => 'Logged out successfully']);
     }
 
 
     // Add method to check authentication status
     public function user(Request $request)
     {
-        return response()->json(['user' => $request->user()]);
+        // For Sanctum stateful auth, check if user is authenticated
+        if (Auth::check()) {
+            return response()->json(['user' => Auth::user()]);
+        }
+
+        return response()->json(['error' => 'Unauthenticated'], 401);
     }
 }

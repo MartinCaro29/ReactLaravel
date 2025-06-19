@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import UserCard from './UserCard';
 import { Container, Row, Col, Spinner, Alert } from 'react-bootstrap';
+import LogoutButton from "./LogoutButton";
 
 const UserList = () => {
     const [users, setUsers] = useState([]);
@@ -25,6 +26,7 @@ const UserList = () => {
 
     return (
         <Container className="mt-4">
+            <LogoutButton></LogoutButton>
             <Row>
                 {users.map(user => (
                     <Col key={user.id} md={4}>
