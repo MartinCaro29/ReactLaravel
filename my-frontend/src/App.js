@@ -8,10 +8,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import {AuthProvider} from "./components/AuthContext";
 import ForgotPassword from "./components/ForgotPassword";
 import LandingPage from "./components/LandingPage";
+import Navigation from "./components/Navigation";
+import Footer from "./components/Footer";
 
 const App = () => {
     return (
         <AuthProvider>
+            <Navigation/>
+
             <Routes>
                 <Route path="/" element={<LandingPage/>} />
                 <Route path="/user/:id" element={<UserDetails />} />
@@ -24,6 +28,8 @@ const App = () => {
                     </ProtectedRoute>
                 } />
             </Routes>
+
+            <Footer/>
             </AuthProvider>
     );
 };

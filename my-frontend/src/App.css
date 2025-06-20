@@ -37,8 +37,4 @@
   }
 }
 
-.bg-mint {
-    --bs-bg-opacity: 1;
-    background-color: rgba(234, 255, 243, var(--bs-bg-opacity)) !important;
-}
 
