@@ -12,10 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class AuthController extends Controller
-
-
 {
-
     private function sendVerificationEmail(User $user, string $token, bool $isResend = false)
     {
         $subject = $isResend ? 'Kodi i ri i Verifikimit' : 'Verifikimi i Email-it';
@@ -53,6 +50,8 @@ class AuthController extends Controller
             'name' => 'required|string|max:255|unique:users',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
+            'role' => 'sometimes|in:user,manager,admin',
+            'manager_id' => 'sometimes|nullable|exists:users,id',
         ], $messages);
 
         if ($validator->fails()) {
@@ -76,12 +75,23 @@ class AuthController extends Controller
                 return response()->json('Ky email është përdorur tashmë.', 400);
             }
 
+            // Set default role if not provided
+            $role = $request->input('role', 'user');
+            $managerId = $request->input('manager_id');
+
+            // Business rules for role and manager
+            if ($role === 'admin') {
+                $managerId = null; // Admins don't have managers
+            }
+
             // Create new user
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'email_verified' => false,
+                'role' => $role,
+                'manager_id' => $managerId,
             ]);
 
             $token = str_pad(rand(100000, 999999), 6, '0', STR_PAD_LEFT);
@@ -100,7 +110,6 @@ class AuthController extends Controller
             } else {
                 return response()->json('Përdoruesi u regjistrua, por verifikimi i email-it dështoi. Ju lutemi kontaktoni mbështetjen.', 200);
             }
-
 
         } catch (\Exception $e) {
             \Log::error('Registration error: ' . $e->getMessage());
@@ -150,13 +159,13 @@ class AuthController extends Controller
         // Delete the verification token
         $verification->delete();
 
-
-
-        // Set cookie for 24 hours (1440 minutes)
+        // Return user with role information
         return response()->json([
             'id' => $user->id,
             'email' => $user->email,
             'email_verified' => 1,
+            'role' => $user->role,
+            'manager_id' => $user->manager_id,
             'user' => $user,
         ]);
     }
@@ -199,7 +208,6 @@ class AuthController extends Controller
             } else {
                 return response()->json('Diçka nuk shkon gjatë dërgimit të email-it. Ju lutemi provoni përsëri më vonë.', 500);
             }
-
 
         } catch (\Exception $e) {
             \Log::error('Resend verification error: ' . $e->getMessage());
@@ -246,15 +254,26 @@ class AuthController extends Controller
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password,], $request->remember)) {
             $request->session()->regenerate();
 
+            // Load user with manager information
+            $authenticatedUser = Auth::user()->load('manager');
+
             return response()->json([
-                'user' => Auth::user(),
+                'user' => [
+                    'id' => $authenticatedUser->id,
+                    'name' => $authenticatedUser->name,
+                    'username' => $authenticatedUser->username,
+                    'email' => $authenticatedUser->email,
+                    'role' => $authenticatedUser->role,
+                    'manager_id' => $authenticatedUser->manager_id,
+                    'manager_name' => $authenticatedUser->manager ? $authenticatedUser->manager->name : null,
+                    'email_verified_at' => $authenticatedUser->email_verified_at,
+                    'created_at' => $authenticatedUser->created_at,
+                ],
             ]);
         }
 
         return response()->json(['error' => 'Authentication failed'], 401);
     }
-
-
 
     public function logout(Request $request)
     {
@@ -270,13 +289,26 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully']);
     }
 
-
     // Add method to check authentication status
     public function user(Request $request)
     {
         // For Sanctum stateful auth, check if user is authenticated
         if (Auth::check()) {
-            return response()->json(['user' => Auth::user()]);
+            $user = Auth::user()->load('manager');
+
+            return response()->json([
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'manager_id' => $user->manager_id,
+                    'manager_name' => $user->manager ? $user->manager->name : null,
+                    'email_verified_at' => $user->email_verified_at,
+                    'created_at' => $user->created_at,
+                ]
+            ]);
         }
 
         return response()->json(['error' => 'Unauthenticated'], 401);

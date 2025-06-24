@@ -1,70 +1,129 @@
-import {Container, Dropdown, Nav, Navbar} from "react-bootstrap";
+import { Container, Dropdown, Nav, Navbar, Badge } from "react-bootstrap";
 import Logo from "../images/logo.png";
-import {FaBell, FaShoppingCart} from "react-icons/fa";
+import { FaBell, FaUser, FaCog, FaSignOutAlt, FaUsers, FaTachometerAlt } from "react-icons/fa";
 import React from "react";
 import '../styles/navigation.css';
-
+import { useAuth } from "./AuthContext";
 
 const Navigation = () => {
+    const { user, logout, isAdmin, isManager } = useAuth();
+
+    const handleLogout = () => {
+        logout();
+    };
+
     return (
+        <Navbar expand="lg" className="modern-nav shadow-sm">
+            <Container fluid className="px-4">
+                <Navbar.Brand href="/" className="nav-brand">
+                    <img
+                        src={Logo}
+                        height="45"
+                        alt="Çaro Logo"
+                        loading="lazy"
+                        className="nav-logo"
+                    />
+                    <span className="brand-text d-none d-md-inline ms-2">Çaro Consulting</span>
+                </Navbar.Brand>
 
-    <Navbar expand="lg" className="shadow-sm bg-mint">
-        <Container fluid>
-            <Navbar.Brand href="#">
-                <img
-                    src={Logo}
-                    height="50"
-                    alt="Caro Logo"
-                    loading="lazy"
-                />
-            </Navbar.Brand>
-            <Navbar.Toggle aria-controls="navbarSupportedContent" />
-            <Navbar.Collapse id="navbarSupportedContent">
-                <Nav className="me-auto mb-2 mb-lg-0">
-                    <Nav.Link className="text-navy" href="#">Dashboard</Nav.Link>
-                    <Nav.Link className="text-navy" href="#">Team</Nav.Link>
-                    <Nav.Link className="text-navy" href="#">Projects</Nav.Link>
-                </Nav>
+                <Navbar.Toggle aria-controls="navbarSupportedContent" className="custom-toggler" />
 
-                <Nav className="align-items-center">
-                    <Nav.Link href="#">
-                        <FaShoppingCart />
-                    </Nav.Link>
+                <Navbar.Collapse id="navbarSupportedContent">
+                    <Nav className="me-auto">
+                        <Nav.Link className="nav-link-custom" href="/">
+                            <span>Home</span>
+                        </Nav.Link>
+                        {user && (
+                            <Nav.Link className="nav-link-custom" href="/dashboard">
+                                <FaTachometerAlt className="me-1" />
+                                <span>Dashboard</span>
+                            </Nav.Link>
+                        )}
+                        <Nav.Link className="nav-link-custom" href="/team">
+                            <span>Team</span>
+                        </Nav.Link>
+                        <Nav.Link className="nav-link-custom" href="/projects">
+                            <span>Projects</span>
+                        </Nav.Link>
+                        {(isAdmin() || isManager()) && (
+                            <Nav.Link className="nav-link-custom" href="/users">
+                                <FaUsers className="me-1" />
+                                <span>User Management</span>
+                            </Nav.Link>
+                        )}
+                    </Nav>
 
-                    <Dropdown align="end">
-                        <Dropdown.Toggle as="a" className="text-reset nav-link p-0">
-                            <FaBell />
-                            <span className="badge rounded-pill bg-danger ms-1">1</span>
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            <Dropdown.Item href="#">Some news</Dropdown.Item>
-                            <Dropdown.Item href="#">Another news</Dropdown.Item>
-                            <Dropdown.Item href="#">Something else here</Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
+                    <Nav className="align-items-center">
+                        {user ? (
+                            <>
+                                {/* Notifications */}
+                                <Nav.Item className="me-3">
+                                    <div className="notification-bell">
+                                        <FaBell className="bell-icon" />
+                                        <Badge bg="danger" className="notification-badge">3</Badge>
+                                    </div>
+                                </Nav.Item>
 
-                    <Dropdown align="end">
-                        <Dropdown.Toggle as="a" className="nav-link p-0 ms-3">
-                            <img
-                                src="https://mdbcdn.b-cdn.net/img/new/avatars/2.webp"
-                                className="rounded-circle"
-                                height="30"
-                                alt="User avatar"
-                                loading="lazy"
-                            />
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            <Dropdown.Item href="#">My profile</Dropdown.Item>
-                            <Dropdown.Item href="#">Settings</Dropdown.Item>
-                            <Dropdown.Item href="#">Logout</Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
-                </Nav>
-            </Navbar.Collapse>
-        </Container>
-    </Navbar>
+                                {/* User Dropdown */}
+                                <Dropdown align="end">
+                                    <Dropdown.Toggle variant="none" className="user-dropdown-toggle">
+                                        <div className="user-avatar">
+                                            <FaUser className="user-icon" />
+                                        </div>
+                                        <div className="user-info d-none d-md-block">
+                                            <div className="user-name">{user.name}</div>
+                                            <div className="user-role">{user.role}</div>
+                                        </div>
+                                    </Dropdown.Toggle>
+
+                                    <Dropdown.Menu className="user-dropdown-menu">
+                                        <div className="dropdown-header">
+                                            <div className="user-details">
+                                                <div className="user-name-dropdown">{user.name}</div>
+                                                <div className="user-email">{user.email}</div>
+                                                <Badge bg="primary" className="role-badge">{user.role}</Badge>
+                                            </div>
+                                        </div>
+
+                                        <Dropdown.Divider />
+
+                                        <Dropdown.Item href="/profile" className="dropdown-item-custom">
+                                            <FaUser className="me-2" />
+                                            Profile
+                                        </Dropdown.Item>
+
+                                        <Dropdown.Item href="/settings" className="dropdown-item-custom">
+                                            <FaCog className="me-2" />
+                                            Settings
+                                        </Dropdown.Item>
+
+                                        <Dropdown.Divider />
+
+                                        <Dropdown.Item
+                                            onClick={handleLogout}
+                                            className="dropdown-item-custom logout-item"
+                                        >
+                                            <FaSignOutAlt className="me-2" />
+                                            Logout
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown>
+                            </>
+                        ) : (
+                            <div className="auth-buttons">
+                                <Nav.Link className="nav-link-custom login-btn" href="/login">
+                                    Login
+                                </Nav.Link>
+                                <Nav.Link className="nav-link-custom signup-btn" href="/register">
+                                    Sign Up
+                                </Nav.Link>
+                            </div>
+                        )}
+                    </Nav>
+                </Navbar.Collapse>
+            </Container>
+        </Navbar>
     );
 };
 
 export default Navigation;
-

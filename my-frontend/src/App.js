@@ -1,35 +1,51 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import UserList from './components/UserList';
-import UserDetails from './components/UserDetails';
+
 import Login from "./components/Login";
 import Register from "./components/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
-import {AuthProvider} from "./components/AuthContext";
+import {AuthProvider, useAuth} from "./components/AuthContext";
 import ForgotPassword from "./components/ForgotPassword";
 import LandingPage from "./components/LandingPage";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
+import AuthRedirect from "./components/AuthRedirect";
 
 const App = () => {
+
+
     return (
         <AuthProvider>
-            <Navigation/>
+
 
             <Routes>
                 <Route path="/" element={<LandingPage/>} />
-                <Route path="/user/:id" element={<UserDetails />} />
-                <Route path="/login" element={<Login/>} />
-                <Route path="/register" element={<Register/>} />
+
+
+                <Route path="/login" element={
+                    <AuthRedirect>
+                        <Login />
+
+                    </AuthRedirect>
+                } />
+
+                <Route path="/register" element={
+                    <AuthRedirect>
+                        <Register />
+
+                    </AuthRedirect>
+                } />
                 <Route path="/forgotpassword" element={<ForgotPassword/>} />
                 <Route path="/dashboard" element={
                     <ProtectedRoute>
                         <UserList />
+
                     </ProtectedRoute>
                 } />
             </Routes>
 
-            <Footer/>
+
             </AuthProvider>
     );
 };

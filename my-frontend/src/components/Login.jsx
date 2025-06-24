@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap';
-
-
-import { useNavigate } from 'react-router-dom';
-import AuthLogo from '../images/dreamestatelogoauth.png';
-import './Auth.css';
+import React, { useState, useEffect } from 'react';
+import { Container, Form, Button, Alert, Card, Spinner } from 'react-bootstrap';
+import { useAuth } from './AuthContext';
+import { useNavigate, Navigate } from 'react-router-dom';
+import AuthLogo from '../images/logo.png';
+import '../styles/ModernAuth.css';
 import api from '../api';
 
 const Login = () => {
-
     const navigate = useNavigate();
+    const { user, login, loading } = useAuth();
 
     const [step, setStep] = useState('login');
     const [userLog, setUserLog] = useState({ email: '', password: '' });
@@ -19,13 +18,12 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [resendSuccess, setResendSuccess] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);  // New state for "Remember Me" checkbox
+    const [rememberMe, setRememberMe] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        if(localStorage.getItem("loggedOut")) localStorage.removeItem("loggedOut");
-    }, [])
-
+    }, []);
 
     useEffect(() => {
         let timer;
@@ -34,6 +32,10 @@ const Login = () => {
         }
         return () => clearInterval(timer);
     }, [countdown]);
+
+    if (user) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const handleChange = (e) => {
         setUserLog({ ...userLog, [e.target.name]: e.target.value });
@@ -44,209 +46,293 @@ const Login = () => {
     const handleError = (message, alertType = 'danger') => {
         setError(message);
         setAlert(alertType);
-        setTimeout(() => setError(''), 3000);
+        setTimeout(() => setError(''), 5000);
     };
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!userLog.email || !userLog.password) {
-            handleError('Plotesoni te gjitha fushat!');
+            handleError('Please fill in all fields!');
             return;
         }
 
         try {
-            // First get CSRF cookie (required by Sanctum)
-            await api.get('http://localhost:8000/sanctum/csrf-cookie', {
-                withCredentials: true,
-            });
+            const response = await login(userLog.email, userLog.password, rememberMe);
 
-            // Then perform login
-            const response = await api.post(
-                'http://localhost:8000/api/login',
-                { email: userLog.email, password: userLog.password, remember: rememberMe },
-                { withCredentials: true }
-            );
-
-            if (response.data.needsVerification) {
+            if (response.needsVerification) {
                 setStep('verify');
-                setCountdown(10);
+                setCountdown(60);
                 return;
             }
 
-            // No token needed, just use user info returned
-            const { user } = response.data;
-
-
-            navigate('/');
-
+            navigate('/dashboard');
         } catch (err) {
-            // error handling remains same
-            handleError('Email-i ose fjalëkalimi nuk janë të sakta. Ju lutem kontrolloni dhe provoni përsëri.');
+            // Enhanced error handling for specific cases
+            if (err.response?.status === 401) {
+                handleError('Invalid email or password. Please check your credentials and try again.');
+            } else if (err.response?.status === 429) {
+                handleError('Too many login attempts. Please wait a few minutes before trying again.');
+            } else if (err.response?.status === 422) {
+                handleError('Please enter a valid email address.');
+            } else if (err.response?.data?.error) {
+                handleError(err.response.data.error);
+            } else {
+                const errorMessage = err.error || err.message || 'Email or password is incorrect. Please check and try again.';
+                handleError(errorMessage);
+            }
         }
     };
-
-
-    const [isVerifying, setIsVerifying] = useState(false);
 
     const handleVerifyEmail = async (e) => {
         e.preventDefault();
         setIsVerifying(true);
 
         try {
-
-
-            const response = await api.post('http://localhost:8000/api/verify-email', {
+            const response = await api.post('/api/verify-email', {
                 email: userLog.email,
                 token: verificationCode,
             });
 
             setAlert('success');
-            setError('Email-i u verifikua me sukses! Po ridrejtoheni...');
-
-
-
+            setError('Email verified successfully! Redirecting...');
 
             setTimeout(() => {
-                navigate('/'); // Redirect to home page or another page
+                navigate('/dashboard');
             }, 2000);
 
         } catch (err) {
             setIsVerifying(false);
-            const errorMsg = err.response?.data === 'Token not found or expired.' ? 'Kodi i verifikimit nuk u gjet ose ka skaduar.' :
-                err.response?.data === 'Token has expired.' ? 'Kodi i verifikimit ka skaduar.' :
-                    err.response?.data === 'Invalid token.' ? 'Kodi i verifikimit është i pavlefshëm.' :
-                        'Gabim gjatë verifikimit. Ju lutemi provoni përsëri.';
+            const errorMsg = err.response?.data === 'Token not found or expired.' ? 'Verification code not found or expired.' :
+                err.response?.data === 'Token has expired.' ? 'Verification code has expired.' :
+                    err.response?.data === 'Invalid token.' ? 'Invalid verification code.' :
+                        'Error during verification. Please try again.';
 
             handleError(errorMsg);
         }
     };
 
-
     const handleResendCode = async () => {
         try {
-            await api.post('http://localhost:8000/api/resend-verification', { email: userLog.email });
-            setResendSuccess('Kodi i verifikimit u ridërgua me sukses!');
-            setCountdown(10);
+            await api.post('/api/resend-verification', { email: userLog.email });
+            setResendSuccess('Verification code resent successfully!');
+            setCountdown(60);
             setTimeout(() => setResendSuccess(''), 3000);
         } catch (err) {
-            handleError('Gabim gjatë ridërgimit të kodit. Ju lutemi provoni përsëri.');
+            handleError('Error resending code. Please try again.');
         }
     };
 
     return (
-        <Container fluid className="vh-100 p-0">
-            <Row className="h-100 g-0">
-                <Col md={6} className="d-none left-side left-side-login d-md-block h-100" />
-                <Col md={6} className="h-100 right-side right-side-login">
-                    <div className="h-100 d-flex align-items-center right-side-stuff justify-content-center p-4">
-                        <div className="w-100" style={{ maxWidth: '400px' }}>
-                            <div className="w-100">
-                                <a href="/">
-                                    <img src={AuthLogo} className="logo-auth-img" style={{ marginBottom: '3rem' }} alt="Auth Logo" />
-                                </a>
+        <div className="modern-auth-container">
+            <div className="auth-background">
+                <div className="auth-overlay"></div>
+                <div className="floating-shapes">
+                    <div className="shape shape-1"></div>
+                    <div className="shape shape-2"></div>
+                    <div className="shape shape-3"></div>
+                    <div className="shape shape-4"></div>
+                </div>
+            </div>
+
+            <Container className="h-100 d-flex align-items-center justify-content-center">
+                <div className="auth-card-wrapper">
+                    <Card className="auth-card shadow-lg">
+                        <Card.Body className="p-4 p-md-5">
+                            {/* Logo */}
+                            <div className="text-center mb-4">
+                                <img
+                                    src={AuthLogo}
+                                    alt="Logo"
+                                    className="auth-logo"
+                                />
                             </div>
-                            <h1 className="text-center mb-4">{step === 'login' ? 'Hyrje' : 'Verifikoni Email-in'}</h1>
+
+                            {/* Title */}
+                            <h2 className="auth-title text-center mb-4">
+                                {step === 'login' ? 'Mirë se erdhët përsëri' : 'Verifikoni Email-in'}
+                            </h2>
+
+                            {step === 'login' && (
+                                <p className="auth-subtitle text-center mb-4">
+                                    Hyni në llogarinë tuaj për të vazhduar
+                                </p>
+                            )}
+
+                            {/* Login Form */}
                             {step === 'login' ? (
                                 <Form onSubmit={handleSubmit}>
-                                    {/* Login Form */}
-                                    <Form.Group className="mb-3 form-element">
-                                        <Form.Label>Email</Form.Label>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label className="auth-label">Email</Form.Label>
                                         <Form.Control
                                             type="email"
                                             name="email"
                                             value={userLog.email}
                                             onChange={handleChange}
-                                            placeholder="Shkruani email-in"
-                                            className="shadow-sm"
+                                            placeholder="Shkruani email-in tuaj"
+                                            className="auth-input"
+                                            size="lg"
                                         />
                                     </Form.Group>
-                                    <Form.Group className="mb-3 form-element">
-                                        <Form.Label>Fjalëkalimi</Form.Label>
-                                        <Form.Control
-                                            type={showPassword ? 'text' : 'password'}
-                                            name="password"
-                                            value={userLog.password}
-                                            onChange={handleChange}
-                                            placeholder="Shkruani fjalëkalimin"
-                                            className="shadow-sm"
-                                        />
-                                    </Form.Group>
+
                                     <Form.Group className="mb-3">
-                                        <Form.Check
-                                            type="checkbox"
-                                            id="show-password"
-                                            label="Shfaq fjalëkalimin"
-                                            onChange={() => setShowPassword(!showPassword)}
-                                            checked={showPassword}
-                                        />
+                                        <Form.Label className="auth-label">Fjalëkalimi</Form.Label>
+                                        <div className="password-input-wrapper">
+                                            <Form.Control
+                                                type={showPassword ? 'text' : 'password'}
+                                                name="password"
+                                                value={userLog.password}
+                                                onChange={handleChange}
+                                                placeholder="Shkruani fjalëkalimin tuaj"
+                                                className="auth-input"
+                                                size="lg"
+                                            />
+                                            <button
+                                                type="button"
+                                                className="password-toggle"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                            >
+                                                <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                            </button>
+                                        </div>
                                     </Form.Group>
-                                    {/* Remember Me Checkbox */}
-                                    <Form.Group className="mb-3">
+
+                                    <div className="d-flex justify-content-between align-items-center mb-4">
                                         <Form.Check
                                             type="checkbox"
                                             id="remember-me"
-                                            label="Më Mbaj Mend"
+                                            label="Më mbaj mend"
                                             checked={rememberMe}
                                             onChange={() => setRememberMe(!rememberMe)}
+                                            className="auth-checkbox"
                                         />
-                                    </Form.Group>
-                                    <div className="d-grid gap-2">
-                                        <Button variant="primary" type="submit" size="lg">
-                                            Hyr
-                                        </Button>
-                                    </div>
-                                    <p className="text-center mt-3">
-                                        Nuk keni një llogari?{' '}
-                                        <a href="/register" className="text-decoration-none auth-link">
-                                            Regjistrohu
+                                        <a href="/forgotpassword" className="auth-link">
+                                            Harruat fjalëkalimin?
                                         </a>
-                                    </p>
-                                    <p className="text-center mt-3">
-                                        Harruat fjalekalimin?{' '}
-                                        <a href="/forgotpassword" className="text-decoration-none auth-link">
-                                            Vazhdoni ketu
+                                    </div>
+
+                                    <Button
+                                        variant="primary"
+                                        type="submit"
+                                        size="lg"
+                                        className="auth-btn w-100 mb-3"
+                                        disabled={loading}
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Spinner
+                                                    as="span"
+                                                    animation="border"
+                                                    size="sm"
+                                                    role="status"
+                                                    className="me-2"
+                                                />
+                                                Duke u kyçur...
+                                            </>
+                                        ) : (
+                                            'Hyr'
+                                        )}
+                                    </Button>
+
+                                    <p className="text-center auth-footer-text">
+                                        Nuk keni një llogari?{' '}
+                                        <a href="/register" className="auth-link fw-bold">
+                                            Regjistrohuni këtu
                                         </a>
                                     </p>
                                 </Form>
                             ) : (
-                                <Form onSubmit={handleVerifyEmail}>
-                                    <Form.Group className="mb-3 form-element">
-                                        <Form.Label>Kodi i Verifikimit</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            value={verificationCode}
-                                            onChange={(e) => setVerificationCode(e.target.value)}
-                                            placeholder="Shkruani kodin e verifikimit"
-                                        />
-                                    </Form.Group>
-                                    <div className="d-grid gap-2">
+                                /* Verification Form */
+                                <div>
+                                    <div className="text-center mb-4">
+                                        <div className="verification-icon mb-3">
+                                            <i className="fas fa-envelope-open"></i>
+                                        </div>
+                                        <p className="verification-text">
+                                            Kemi dërguar një kod verifikimi në <strong>{userLog.email}</strong>
+                                        </p>
+                                    </div>
+
+                                    <Form onSubmit={handleVerifyEmail}>
+                                        <Form.Group className="mb-4">
+                                            <Form.Label className="auth-label">Kodi i Verifikimit</Form.Label>
+                                            <Form.Control
+                                                type="text"
+                                                value={verificationCode}
+                                                onChange={(e) => setVerificationCode(e.target.value)}
+                                                placeholder="Shkruani kodin 6-shifror"
+                                                className="auth-input text-center"
+                                                size="lg"
+                                                maxLength="6"
+                                            />
+                                        </Form.Group>
+
                                         <Button
                                             variant="primary"
                                             type="submit"
                                             size="lg"
-                                            className="mb-3"
+                                            className="auth-btn w-100 mb-3"
                                             disabled={isVerifying}
                                         >
-                                            {isVerifying ? 'Duke verifikuar...' : 'Verifiko Email-in'}
+                                            {isVerifying ? (
+                                                <>
+                                                    <Spinner
+                                                        as="span"
+                                                        animation="border"
+                                                        size="sm"
+                                                        role="status"
+                                                        className="me-2"
+                                                    />
+                                                    Duke verifikuar...
+                                                </>
+                                            ) : (
+                                                'Verifiko Email-in'
+                                            )}
                                         </Button>
-                                        <Button variant="outline-primary" onClick={handleResendCode} disabled={countdown > 0}>
+
+                                        <Button
+                                            variant="outline-primary"
+                                            onClick={handleResendCode}
+                                            disabled={countdown > 0}
+                                            className="w-100 mb-3"
+                                            size="lg"
+                                        >
                                             {countdown > 0 ? `Ridërgo kodin (${countdown}s)` : 'Ridërgo kodin'}
                                         </Button>
-                                        <Button variant="link" className="text-decoration-none auth-link" onClick={() => setStep('login')}>
-                                            Kthehu te Hyrja
-                                        </Button>
-                                    </div>
-                                </Form>
+
+                                        <div className="text-center">
+                                            <button
+                                                type="button"
+                                                className="btn btn-link auth-link"
+                                                onClick={() => setStep('login')}
+                                            >
+                                                <i className="fas fa-arrow-left me-2"></i>
+                                                Kthehu te hyrja
+                                            </button>
+                                        </div>
+                                    </Form>
+                                </div>
                             )}
-                            {error && <Alert variant={alert} className="mt-3">{error}</Alert>}
-                            {resendSuccess && <Alert variant="success" className="mt-3">{resendSuccess}</Alert>}
-                        </div>
-                    </div>
-                </Col>
-            </Row>
-        </Container>
+
+                            {/* Alerts */}
+                            {error && (
+                                <Alert variant={alert} className="mt-3 auth-alert">
+                                    <i className={`fas ${alert === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} me-2`}></i>
+                                    {error}
+                                </Alert>
+                            )}
+
+                            {resendSuccess && (
+                                <Alert variant="success" className="mt-3 auth-alert">
+                                    <i className="fas fa-check-circle me-2"></i>
+                                    {resendSuccess}
+                                </Alert>
+                            )}
+                        </Card.Body>
+                    </Card>
+                </div>
+            </Container>
+        </div>
     );
 };
 

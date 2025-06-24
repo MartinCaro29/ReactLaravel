@@ -18,6 +18,8 @@ class User extends Authenticatable
         'password',
         'email_verified_at',
         'remember_token',
+        'manager_id',
+        'role',
     ];
 
     protected $hidden = [
@@ -38,5 +40,40 @@ class User extends Authenticatable
     public function verificationTokens()
     {
         return $this->hasOne(EmailVerificationToken::class);
+    }
+
+    // Relationship with manager
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    // Relationship with subordinates
+    public function subordinates()
+    {
+        return $this->hasMany(User::class, 'manager_id');
+    }
+
+    // Check if user can edit another user
+    public function canEdit(User $targetUser)
+    {
+        // Admin can edit everyone except themselves
+        if ($this->role === 'admin') {
+            return $this->id !== $targetUser->id;
+        }
+
+        // Manager can edit their subordinates
+        if ($this->role === 'manager') {
+            return $targetUser->manager_id === $this->id;
+        }
+
+        // Regular users can't edit anyone
+        return false;
+    }
+
+    // Check if user can delete another user
+    public function canDelete(User $targetUser)
+    {
+        return $this->canEdit($targetUser);
     }
 }
