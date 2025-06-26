@@ -23,6 +23,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // User management routes
     Route::get('/users', [UserController::class, 'getAllUsers']);
+    Route::post('/users', [UserController::class, 'createUser']); // ADD THIS LINE
     Route::put('/users/{id}', [UserController::class, 'updateUser']);
     Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
     Route::get('/managers', [UserController::class, 'getManagers']);

@@ -30,6 +30,32 @@ const ForgotPassword = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    const validatePassword = (password) => {
+        const minLength = password.length >= 8;
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+        const hasSpecialChar = /[@$!%*?&]/.test(password);
+
+        return {
+            minLength,
+            hasUpperCase,
+            hasLowerCase,
+            hasNumbers,
+            hasSpecialChar,
+            isValid: minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar
+        };
+    };
+
+    const [passwordValidation, setPasswordValidation] = useState({
+        minLength: false,
+        hasUpperCase: false,
+        hasLowerCase: false,
+        hasNumbers: false,
+        hasSpecialChar: false,
+        isValid: false
+    });
+
     useEffect(() => {
         const checkAuthentication = async () => {
             if (authLoading) return;
@@ -37,13 +63,8 @@ const ForgotPassword = () => {
             if (user) {
                 setEmail(user.email);
                 setIsAuthenticated(true);
-                try {
-                    await api.post('/api/request-password-reset', { email: user.email });
-                    setStep('verify');
-                    setCountdown(60);
-                } catch (err) {
-                    setError(err.response?.data?.message || 'Failed to send reset code');
-                }
+                setStep('reset');
+                setVerificationCode('logged_in_user');
             } else {
                 setStep('email');
             }
@@ -62,12 +83,6 @@ const ForgotPassword = () => {
         return () => clearInterval(timer);
     }, [countdown]);
 
-    const validatePassword = (password) => {
-        const hasUpperCase = /[A-Z]/.test(password);
-        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-        return hasUpperCase && hasSpecialChar;
-    };
-
     const handleError = (message, alertType = 'danger') => {
         setError(message);
         setAlert(alertType);
@@ -79,7 +94,7 @@ const ForgotPassword = () => {
     const handleEmailSubmit = async (e) => {
         e.preventDefault();
         if (!email) {
-            handleError('Email-i është i detyrueshëm');
+            handleError('Email is required');
             return;
         }
 
@@ -93,7 +108,7 @@ const ForgotPassword = () => {
             if (err.response?.status === 404) {
                 handleError('Ky email nuk ekziston.');
             } else {
-                handleError('Gabim gjatë dërgimit të kodit. Ju lutemi provoni përsëri.');
+                handleError('Error while sending the code. Please try again.');
             }
         } finally {
             setIsLoading(false);
@@ -104,18 +119,18 @@ const ForgotPassword = () => {
         try {
             await api.get('/sanctum/csrf-cookie');
             await api.post('/api/resend-verification', { email: email });
-            setResendSuccess('Kodi i verifikimit u ridërgua me sukses!');
+            setResendSuccess('The code was sent successfully!');
             setCountdown(60);
             setTimeout(() => setResendSuccess(''), 3000);
         } catch (err) {
-            handleError('Gabim gjatë ridërgimit të kodit. Ju lutemi provoni përsëri.');
+            handleError('Error while sending the code. Please try again.');
         }
     };
 
     const handleVerifyCode = async (e) => {
         e.preventDefault();
         if (!verificationCode) {
-            handleError('Kodi i verifikimit është i detyrueshëm');
+            handleError('The verification code is required');
             return;
         }
 
@@ -134,46 +149,70 @@ const ForgotPassword = () => {
                 } else if (errorMessage === 'Kodi i verifikimit është i pavlefshëm.') {
                     handleError('Kodi i verifikimit është i pavlefshëm.');
                 } else {
-                    handleError('Kodi i verifikimit është i pasaktë ose ka skaduar.');
+                    handleError('The verification code is incorrect or expired.');
                 }
             } else {
-                handleError('Kodi i verifikimit është i pasaktë ose ka skaduar.');
+                handleError('The verification code is incorrect or expired.');
             }
         } finally {
             setIsVerifying(false);
         }
     };
 
+    const handlePasswordChange = (field, value) => {
+        setPasswords(prev => ({ ...prev, [field]: value }));
+
+        if (field === 'password') {
+            setPasswordValidation(validatePassword(value));
+        }
+    };
+
     const handlePasswordReset = async (e) => {
         e.preventDefault();
         if (!passwords.password || !passwords.confirmPassword) {
-            handleError('Të gjitha fushat janë të detyrueshme');
+            handleError('All fields are required');
             return;
         }
         if (passwords.password !== passwords.confirmPassword) {
-            handleError('Fjalëkalimet nuk përputhen');
+            handleError('Passwords don\'t match');
             return;
         }
-        if (passwords.password.length < 8 || !validatePassword(passwords.password)) {
-            handleError('Fjalëkalimi duhet të jetë të paktën 8 karaktere i gjatë, të përmbajë një shkronjë të madhe dhe një karakter special.');
+
+        const validation = validatePassword(passwords.password);
+        if (!validation.isValid) {
+            handleError('Please ensure that the password meets all criteria.');
             return;
         }
 
         setIsLoading(true);
         try {
             await api.get('/sanctum/csrf-cookie');
-            await api.post('/api/reset-password', {
-                email: email,
-                token: verificationCode,
-                new_password: passwords.password,
-                new_password_confirmation: passwords.confirmPassword
-            });
+
+            if (isAuthenticated) {
+                await api.post('/api/reset-password', {
+                    email: email,
+                    token: "auth",
+                    new_password: passwords.password,
+                    new_password_confirmation: passwords.confirmPassword
+                });
+            } else {
+                await api.post('/api/reset-password', {
+                    email: email,
+                    token: verificationCode,
+                    new_password: passwords.password,
+                    new_password_confirmation: passwords.confirmPassword
+                });
+            }
 
             setAlert('success');
-            setError('Fjalëkalimi u ndryshua me sukses! Po ridrejtoheni...');
+            setError('Password changed successfully. Redirecting...');
 
             setTimeout(() => {
-                navigate('/login');
+                if (isAuthenticated) {
+                    navigate('/dashboard');
+                } else {
+                    navigate('/login');
+                }
             }, 2000);
 
         } catch (err) {
@@ -198,12 +237,12 @@ const ForgotPassword = () => {
 
             setTimeout(() => {
                 if (isAuthenticated) {
-                    setStep('verify');
+                    setStep('reset');
                 } else {
                     setStep('email');
                     setEmail('');
+                    setVerificationCode('');
                 }
-                setVerificationCode('');
             }, 3000);
         } finally {
             setIsLoading(false);
@@ -216,9 +255,9 @@ const ForgotPassword = () => {
                 return (
                     <div className="text-center">
                         <Spinner animation="border" role="status">
-                            <span className="visually-hidden">Duke kontrolluar...</span>
+                            <span className="visually-hidden">Checking...</span>
                         </Spinner>
-                        <p className="mt-3">Duke kontrolluar gjendjen...</p>
+                        <p className="mt-3">Checking status...</p>
                     </div>
                 );
 
@@ -230,7 +269,7 @@ const ForgotPassword = () => {
                                 <i className="fas fa-key"></i>
                             </div>
                             <p className="forgot-password-text">
-                                Shkruani email-in tuaj dhe ne do t'ju dërgojmë një kod për të rivendosur fjalëkalimin
+                                Enter your email and we'll send you a code to reset your password
                             </p>
                         </div>
 
@@ -241,7 +280,7 @@ const ForgotPassword = () => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Shkruani email-in tuaj"
+                                    placeholder="Enter your email"
                                     className="auth-input"
                                     size="lg"
                                     required
@@ -264,10 +303,10 @@ const ForgotPassword = () => {
                                             role="status"
                                             className="me-2"
                                         />
-                                        Duke dërguar...
+                                        Sending...
                                     </>
                                 ) : (
-                                    'Dërgo kodin e verifikimit'
+                                    'Send verification code'
                                 )}
                             </Button>
                         </Form>
@@ -282,18 +321,18 @@ const ForgotPassword = () => {
                                 <i className="fas fa-envelope-open"></i>
                             </div>
                             <p className="verification-text">
-                                Kemi dërguar një kod verifikimi në <strong>{email}</strong>
+                                We sent a verification code to <strong>{email}</strong>
                             </p>
                         </div>
 
                         <Form onSubmit={handleVerifyCode}>
                             <Form.Group className="mb-4">
-                                <Form.Label className="auth-label">Kodi i Verifikimit</Form.Label>
+                                <Form.Label className="auth-label">Verification Code</Form.Label>
                                 <Form.Control
                                     type="text"
                                     value={verificationCode}
                                     onChange={(e) => setVerificationCode(e.target.value)}
-                                    placeholder="Shkruani kodin 6-shifror"
+                                    placeholder="Enter 6-digit code"
                                     className="auth-input text-center"
                                     size="lg"
                                     maxLength="6"
@@ -317,10 +356,10 @@ const ForgotPassword = () => {
                                             role="status"
                                             className="me-2"
                                         />
-                                        Duke verifikuar...
+                                        Verifying...
                                     </>
                                 ) : (
-                                    'Verifiko Kodin'
+                                    'Verify Code'
                                 )}
                             </Button>
 
@@ -331,7 +370,7 @@ const ForgotPassword = () => {
                                 className="w-100 mb-3"
                                 size="lg"
                             >
-                                {countdown > 0 ? `Ridërgo kodin (${countdown}s)` : 'Ridërgo kodin'}
+                                {countdown > 0 ? `Resend code (${countdown}s)` : 'Resend code'}
                             </Button>
                         </Form>
                     </div>
@@ -345,19 +384,22 @@ const ForgotPassword = () => {
                                 <i className="fas fa-check-circle"></i>
                             </div>
                             <p className="success-text">
-                                Kodi u verifikua me sukses! Tani mund të vendosni fjalëkalimin e ri.
+                                {isAuthenticated
+                                    ? 'Change your account password.'
+                                    : 'Code verified successfully! Now you can set a new password.'
+                                }
                             </p>
                         </div>
 
                         <Form onSubmit={handlePasswordReset}>
                             <Form.Group className="mb-3">
-                                <Form.Label className="auth-label">Fjalëkalimi i ri</Form.Label>
+                                <Form.Label className="auth-label">New Password</Form.Label>
                                 <div className="password-input-wrapper">
                                     <Form.Control
                                         type={showPassword ? 'text' : 'password'}
                                         value={passwords.password}
-                                        onChange={(e) => setPasswords({ ...passwords, password: e.target.value })}
-                                        placeholder="Shkruani fjalëkalimin e ri"
+                                        onChange={(e) => handlePasswordChange('password', e.target.value)}
+                                        placeholder="Enter new password"
                                         className="auth-input"
                                         size="lg"
                                         required
@@ -370,18 +412,42 @@ const ForgotPassword = () => {
                                         <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
                                 </div>
-                                <Form.Text className="text-muted small">
-                                    Të paktën 8 karaktere, 1 shkronjë e madhe, 1 karakter special
-                                </Form.Text>
+
+                                {passwords.password && (
+                                    <div className="password-requirements mt-2">
+                                        <small className="form-text">
+                                            <div className={`requirement ${passwordValidation.minLength ? 'text-success' : 'text-danger'}`}>
+                                                <i className={`fas ${passwordValidation.minLength ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                At least 8 characters
+                                            </div>
+                                            <div className={`requirement ${passwordValidation.hasUpperCase ? 'text-success' : 'text-danger'}`}>
+                                                <i className={`fas ${passwordValidation.hasUpperCase ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                One uppercase letter (A-Z)
+                                            </div>
+                                            <div className={`requirement ${passwordValidation.hasLowerCase ? 'text-success' : 'text-danger'}`}>
+                                                <i className={`fas ${passwordValidation.hasLowerCase ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                One lowercase letter (a-z)
+                                            </div>
+                                            <div className={`requirement ${passwordValidation.hasNumbers ? 'text-success' : 'text-danger'}`}>
+                                                <i className={`fas ${passwordValidation.hasNumbers ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                One number (0-9)
+                                            </div>
+                                            <div className={`requirement ${passwordValidation.hasSpecialChar ? 'text-success' : 'text-danger'}`}>
+                                                <i className={`fas ${passwordValidation.hasSpecialChar ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                One special character (@$!%*?&)
+                                            </div>
+                                        </small>
+                                    </div>
+                                )}
                             </Form.Group>
 
                             <Form.Group className="mb-4">
-                                <Form.Label className="auth-label">Konfirmo fjalëkalimin e ri</Form.Label>
+                                <Form.Label className="auth-label">Confirm New Password</Form.Label>
                                 <Form.Control
                                     type={showPassword ? 'text' : 'password'}
                                     value={passwords.confirmPassword}
-                                    onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                                    placeholder="Konfirmoni fjalëkalimin e ri"
+                                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                                    placeholder="Confirm new password"
                                     className="auth-input"
                                     size="lg"
                                     required
@@ -393,7 +459,7 @@ const ForgotPassword = () => {
                                 type="submit"
                                 size="lg"
                                 className="auth-btn w-100"
-                                disabled={isLoading}
+                                disabled={isLoading || !passwordValidation.isValid}
                             >
                                 {isLoading ? (
                                     <>
@@ -404,10 +470,10 @@ const ForgotPassword = () => {
                                             role="status"
                                             className="me-2"
                                         />
-                                        Duke ndryshuar...
+                                        Changing...
                                     </>
                                 ) : (
-                                    'Ndrysho Fjalëkalimin'
+                                    'Change Password'
                                 )}
                             </Button>
                         </Form>
@@ -422,14 +488,14 @@ const ForgotPassword = () => {
     const getTitle = () => {
         switch (step) {
             case 'email':
-                return 'Harruat fjalëkalimin?';
+                return 'Forgot your password?';
             case 'verify':
-                return 'Verifikoni email-in';
+                return 'Verify your email';
             case 'reset':
-                return 'Fjalëkalimi i ri';
+                return isAuthenticated ? 'Change password' : 'New password';
             case 'initial':
             default:
-                return 'Duke kontrolluar...';
+                return 'Checking...';
         }
     };
 
@@ -449,7 +515,6 @@ const ForgotPassword = () => {
                 <div className="auth-card-wrapper">
                     <Card className="auth-card shadow-lg">
                         <Card.Body className="p-4 p-md-5">
-                            {/* Logo */}
                             <div className="text-center mb-4">
                                 <a href ='/'>
                                     <img
@@ -460,15 +525,12 @@ const ForgotPassword = () => {
                                 </a>
                             </div>
 
-                            {/* Title */}
                             <h2 className="auth-title text-center mb-4">
                                 {getTitle()}
                             </h2>
 
-                            {/* Content */}
                             {getStepContent()}
 
-                            {/* Alerts */}
                             {error && (
                                 <Alert variant={alert} className="mt-3 auth-alert">
                                     <i className={`fas ${alert === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} me-2`}></i>
@@ -483,12 +545,11 @@ const ForgotPassword = () => {
                                 </Alert>
                             )}
 
-                            {/* Footer Links */}
                             {!isAuthenticated && step !== 'initial' && (
                                 <p className="text-center mt-4 auth-footer-text">
-                                    Ju kujtua fjalëkalimi?{' '}
+                                    Remember your password?{' '}
                                     <a href="/login" className="auth-link fw-bold">
-                                        Hyni këtu
+                                        Sign in here
                                     </a>
                                 </p>
                             )}
@@ -497,7 +558,7 @@ const ForgotPassword = () => {
                                 <p className="text-center mt-4 auth-footer-text">
                                     <a href="/dashboard" className="auth-link fw-bold">
                                         <i className="fas fa-arrow-left me-2"></i>
-                                        Kthehu në dashboard
+                                        Back to dashboard
                                     </a>
                                 </p>
                             )}

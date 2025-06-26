@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -26,7 +28,6 @@ class UserController extends Controller
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
-                    'username' => $user->username,
                     'email' => $user->email,
                     'role' => $user->role,
                     'manager_id' => $user->manager_id,
@@ -51,6 +52,109 @@ class UserController extends Controller
         }
     }
 
+    public function createUser(Request $request)
+    {
+        try {
+            $currentUser = Auth::user();
+
+            if (!$currentUser) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            // Check if current user can create users (only admin and managers)
+            if (!in_array($currentUser->role, ['admin', 'manager'])) {
+                return response()->json(['error' => 'Unauthorized to create users'], 403);
+            }
+
+            // Custom validation messages
+            $messages = [
+                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            ];
+
+            // Validation rules
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255|unique:users',
+                'email' => 'required|email|max:255|unique:users',
+                'password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+                ],
+                'role' => 'required|in:user,manager,admin',
+                'manager_id' => 'nullable|exists:users,id',
+            ], $messages);
+
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()->first()], 400);
+            }
+
+            $validatedData = $validator->validated();
+
+            // Business rules validation
+            if (isset($validatedData['manager_id']) && $validatedData['manager_id']) {
+                $selectedManager = User::find($validatedData['manager_id']);
+                if (!$selectedManager || !in_array($selectedManager->role, ['manager', 'admin'])) {
+                    return response()->json(['error' => 'Selected manager must have manager or admin role'], 400);
+                }
+            }
+
+            // Role-specific validation
+            if ($validatedData['role'] === 'admin') {
+                // Only admin can create admin users
+                if ($currentUser->role !== 'admin') {
+                    return response()->json(['error' => 'Only admin can create admin users'], 403);
+                }
+                // Admins don't have managers
+                $validatedData['manager_id'] = null;
+            }
+
+            // Managers can only create users and assign themselves as manager
+            if ($currentUser->role === 'manager' && $validatedData['role'] === 'manager') {
+                return response()->json(['error' => 'Managers cannot create other managers'], 403);
+            }
+
+            if ($currentUser->role === 'manager' && $validatedData['manager_id'] && $validatedData['manager_id'] != $currentUser->id) {
+                return response()->json(['error' => 'You can only assign yourself as manager'], 403);
+            }
+
+            // Create the user with email instantly verified
+            $user = User::create([
+                'name' => $validatedData['name'],
+                'email' => $validatedData['email'],
+                'password' => Hash::make($validatedData['password']),
+                'role' => $validatedData['role'],
+                'manager_id' => $validatedData['manager_id'],
+                'email_verified_at' => now(), // Instantly verify email
+            ]);
+
+            // Load the user with manager information for response
+            $createdUser = User::with('manager')->find($user->id);
+
+            $responseUser = [
+                'id' => $createdUser->id,
+                'name' => $createdUser->name,
+                'email' => $createdUser->email,
+                'role' => $createdUser->role,
+                'manager_id' => $createdUser->manager_id,
+                'manager_name' => $createdUser->manager ? $createdUser->manager->name : null,
+                'email_verified_at' => $createdUser->email_verified_at,
+                'created_at' => $createdUser->created_at,
+                'can_edit' => $currentUser->canEdit($createdUser),
+                'can_delete' => $currentUser->canDelete($createdUser),
+            ];
+
+            return response()->json([
+                'message' => 'User created successfully',
+                'user' => $responseUser
+            ], 201);
+
+        } catch (\Exception $e) {
+            \Log::error('Create user error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create user'], 500);
+        }
+    }
+
     public function updateUser(Request $request, $id)
     {
         try {
@@ -67,7 +171,6 @@ class UserController extends Controller
 
             $validatedData = $request->validate([
                 'name' => 'sometimes|string|max:255',
-                'username' => 'sometimes|string|max:255|unique:users,username,' . $id,
                 'email' => 'sometimes|email|max:255|unique:users,email,' . $id,
                 'role' => 'sometimes|in:user,manager,admin',
                 'manager_id' => 'sometimes|nullable|exists:users,id',
@@ -117,7 +220,6 @@ class UserController extends Controller
             $responseUser = [
                 'id' => $updatedUser->id,
                 'name' => $updatedUser->name,
-                'username' => $updatedUser->username,
                 'email' => $updatedUser->email,
                 'role' => $updatedUser->role,
                 'manager_id' => $updatedUser->manager_id,

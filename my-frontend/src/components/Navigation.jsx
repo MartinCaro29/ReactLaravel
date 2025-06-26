@@ -92,9 +92,9 @@ const Navigation = () => {
                                             Profile
                                         </Dropdown.Item>
 
-                                        <Dropdown.Item href="/settings" className="dropdown-item-custom">
+                                        <Dropdown.Item href="/forgotpassword" className="dropdown-item-custom">
                                             <FaCog className="me-2" />
-                                            Settings
+                                            Change Password
                                         </Dropdown.Item>
 
                                         <Dropdown.Divider />

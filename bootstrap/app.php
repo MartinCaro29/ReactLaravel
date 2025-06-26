@@ -14,7 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->group('api', [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            \Illuminate\Routing\Middleware\ThrottleRequests::class.':60,1', // Simple rate limiting
+            \Illuminate\Routing\Middleware\ThrottleRequests::class.':60,1',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
@@ -27,16 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
+        // EXEMPT ALL API ROUTES FROM CSRF
         $middleware->validateCsrfTokens(except: [
-            'sanctum/csrf-cookie',
-            'api/login',  // Add any other API routes that need CSRF exemption
-            'api/logout',
-            'api/register',
-            'api/verify-email',
-            'api/request-password-reset',
-            'api/reset-password',
-            'api/verify-reset-code'
-
+            'api/*',  // This exempts ALL API routes from CSRF
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

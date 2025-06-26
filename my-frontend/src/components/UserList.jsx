@@ -9,6 +9,7 @@ import DataTable from 'datatables.net-react';
 import DT from 'datatables.net-dt';
 import 'datatables.net-dt/css/dataTables.dataTables.css';
 import '../styles/user-management.css';
+import {FaPencil} from "react-icons/fa6";
 
 DataTable.use(DT);
 
@@ -21,13 +22,14 @@ const UserList = () => {
     const [success, setSuccess] = useState(null);
 
     // Modal states
+    const [showCreateModal, setShowCreateModal] = useState(false); // ADD THIS LINE
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
-        username: '',
         email: '',
+        password: '', // ADD THIS LINE
         role: 'user',
         manager_id: ''
     });
@@ -101,13 +103,34 @@ const UserList = () => {
         }
     }, [error, success]);
 
+    // Handle create user
+    const handleCreateUser = () => {
+        setFormData({
+            name: '',
+            email: '',
+            password: '',
+            role: 'user',
+            manager_id: ''
+        });
+        // Reset password validation
+        setPasswordValidation({
+            minLength: false,
+            hasUpperCase: false,
+            hasLowerCase: false,
+            hasNumbers: false,
+            hasSpecialChar: false,
+            isValid: false
+        });
+        setShowCreateModal(true);
+    };
+
     // Handle edit user
     const handleEditUser = (user) => {
         setSelectedUser(user);
         setFormData({
             name: user.name || '',
-            username: user.username || '',
             email: user.email || '',
+            password: '', // Don't include password in edit
             role: user.role || 'user',
             manager_id: user.manager_id || ''
         });
@@ -120,13 +143,63 @@ const UserList = () => {
         setShowDeleteModal(true);
     };
 
+    // Submit create form
+    const handleSubmitCreate = async (e) => {
+        e.preventDefault();
+
+        // Validate password before submitting
+        const validation = validatePassword(formData.password);
+        if (!validation.isValid) {
+            setError('Please ensure your password meets all requirements.');
+            return;
+        }
+
+        setFormLoading(true);
+
+        try {
+            const response = await api.post('/api/users', formData);
+
+            // Add new user to list
+            setUsers([...users, response.data.user]);
+
+            setSuccess('User created successfully');
+            setShowCreateModal(false);
+
+            // Reset form
+            setFormData({
+                name: '',
+                email: '',
+                password: '',
+                role: 'user',
+                manager_id: ''
+            });
+            // Reset password validation
+            setPasswordValidation({
+                minLength: false,
+                hasUpperCase: false,
+                hasLowerCase: false,
+                hasNumbers: false,
+                hasSpecialChar: false,
+                isValid: false
+            });
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to create user');
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
     // Submit edit form
     const handleSubmitEdit = async (e) => {
         e.preventDefault();
         setFormLoading(true);
 
         try {
-            const response = await api.put(`/api/users/${selectedUser.id}`, formData);
+            // Remove password from edit data
+            const editData = { ...formData };
+            delete editData.password;
+
+            const response = await api.put(`/api/users/${selectedUser.id}`, editData);
 
             // Update users list
             setUsers(users.map(user =>
@@ -163,13 +236,46 @@ const UserList = () => {
         }
     };
 
-    // Handle form input changes
+    // Password validation function
+    const validatePassword = (password) => {
+        const minLength = password.length >= 8;
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+        const hasSpecialChar = /[@$!%*?&]/.test(password);
+
+        return {
+            minLength,
+            hasUpperCase,
+            hasLowerCase,
+            hasNumbers,
+            hasSpecialChar,
+            isValid: minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar
+        };
+    };
+
+    // Password validation state
+    const [passwordValidation, setPasswordValidation] = useState({
+        minLength: false,
+        hasUpperCase: false,
+        hasLowerCase: false,
+        hasNumbers: false,
+        hasSpecialChar: false,
+        isValid: false
+    });
+
+    // Handle form input changes with password validation
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
+
+        // Validate password in real-time for create modal
+        if (name === 'password' && showCreateModal) {
+            setPasswordValidation(validatePassword(value));
+        }
     };
 
     // Get role badge variant
@@ -184,25 +290,23 @@ const UserList = () => {
 
     // Prepare data for DataTable
     const tableData = users.map(user => [
-        user.name || 'N/A',
-        user.username || 'N/A',
-        user.email || 'N/A',
-        `<span class="badge bg-${getRoleBadgeVariant(user.role)}">${user.role}</span>`,
-        user.manager_name || 'N/A',
-        user.email_verified_at ?
+        user.name || 'N/A',                    // Column 0
+        user.email || 'N/A',                   // Column 1
+        `<span class="badge bg-${getRoleBadgeVariant(user.role)}">${user.role}</span>`, // Column 2
+        user.manager_name || 'N/A',            // Column 3
+        user.email_verified_at ?               // Column 4
             `<span class="badge bg-success">Verified</span>` :
             `<span class="badge bg-warning">Unverified</span>`,
         user.can_edit || user.can_delete ? `
-            <div class="btn-group" role="group">
-                ${user.can_edit ? `<button class="btn btn-sm btn-mint edit-btn" data-user-id="${user.id}" title="Edit User"><i class="fas fa-edit"></i></button>` : ''}
-                ${user.can_delete ? `<button class="btn btn-sm btn-navy delete-btn" data-user-id="${user.id}" title="Delete User"><i class="fas fa-trash"></i></button>` : ''}
-            </div>
-        ` : 'No actions'
+        <div class="btn-group" role="group">
+            ${user.can_edit ? `<button class="btn btn-sm btn-mint edit-btn" data-user-id="${user.id}" title="Edit User"><i class="fas fa-edit"></i></button>` : ''}
+            ${user.can_delete ? `<button class="btn btn-sm btn-navy delete-btn" data-user-id="${user.id}" title="Delete User"><i class="fas fa-trash"></i></button>` : ''}
+        </div>
+    ` : 'No actions'
     ]);
 
     const tableColumns = [
         { title: 'Name' },
-        { title: 'Username' },
         { title: 'Email' },
         { title: 'Role' },
         { title: 'Manager' },
@@ -277,7 +381,7 @@ const UserList = () => {
                                 <FaDownload className="me-2" />
                                 Export
                             </Button>
-                            <Button variant="primary">
+                            <Button variant="primary" onClick={handleCreateUser}>
                                 <FaPlus className="me-2" />
                                 Add User
                             </Button>
@@ -372,7 +476,7 @@ const UserList = () => {
                                         responsive: true,
                                         order: [[0, 'asc']],
                                         columnDefs: [
-                                            { targets: [3, 5, 6], orderable: false, searchable: false }
+                                            { targets: [2, 4, 5], orderable: false, searchable: false }
                                         ],
                                         drawCallback: function() {
                                             const table = this.api().table().container();
@@ -386,6 +490,176 @@ const UserList = () => {
                         </Card.Body>
                     </Card>
                 )}
+
+                {/* Create User Modal */}
+                <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg" className="modern-modal">
+                    <Modal.Header closeButton className="modern-modal-header">
+                        <Modal.Title>
+                            <FaPencil className="me-2" />
+                            Create User
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Form onSubmit={handleSubmitCreate}>
+                        <Modal.Body className="modern-modal-body">
+                            <Row>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label className="modern-label">Name *</Form.Label>
+                                        <Form.Control
+                                            type="text"
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            className="modern-input"
+                                            required
+                                        />
+                                    </Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label className="modern-label">Password *</Form.Label>
+                                        <Form.Control
+                                            type="password"
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleInputChange}
+                                            className="modern-input"
+                                            required
+                                            minLength="8"
+                                            placeholder="Enter secure password"
+                                        />
+
+                                        {/* Password Requirements */}
+                                        {formData.password && (
+                                            <div className="password-requirements mt-2">
+                                                <small className="form-text">
+                                                    <div className={`requirement ${passwordValidation.minLength ? 'text-success' : 'text-danger'}`}>
+                                                        <i className={`fas ${passwordValidation.minLength ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                        At least 8 characters
+                                                    </div>
+                                                    <div className={`requirement ${passwordValidation.hasUpperCase ? 'text-success' : 'text-danger'}`}>
+                                                        <i className={`fas ${passwordValidation.hasUpperCase ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                        One uppercase letter (A-Z)
+                                                    </div>
+                                                    <div className={`requirement ${passwordValidation.hasLowerCase ? 'text-success' : 'text-danger'}`}>
+                                                        <i className={`fas ${passwordValidation.hasLowerCase ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                        One lowercase letter (a-z)
+                                                    </div>
+                                                    <div className={`requirement ${passwordValidation.hasNumbers ? 'text-success' : 'text-danger'}`}>
+                                                        <i className={`fas ${passwordValidation.hasNumbers ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                        One number (0-9)
+                                                    </div>
+                                                    <div className={`requirement ${passwordValidation.hasSpecialChar ? 'text-success' : 'text-danger'}`}>
+                                                        <i className={`fas ${passwordValidation.hasSpecialChar ? 'fa-check' : 'fa-times'} me-1`}></i>
+                                                        One special character (@$!%*?&)
+                                                    </div>
+                                                </small>
+                                            </div>
+                                        )}
+                                    </Form.Group>
+                                </Col>
+                            </Row>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label className="modern-label">Email *</Form.Label>
+                                <Form.Control
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleInputChange}
+                                    className="modern-input"
+                                    required
+                                />
+                            </Form.Group>
+
+                            <Row>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label className="modern-label">Role *</Form.Label>
+                                        <Form.Select
+                                            name="role"
+                                            value={formData.role}
+                                            onChange={handleInputChange}
+                                            className="modern-select"
+                                            required
+                                        >
+                                            <option value="user">User</option>
+                                            <option value="manager">Manager</option>
+                                            {isAdmin() && <option value="admin">Admin</option>}
+                                        </Form.Select>
+                                    </Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label className="modern-label">Manager</Form.Label>
+                                        <Form.Select
+                                            name="manager_id"
+                                            value={formData.manager_id}
+                                            onChange={handleInputChange}
+                                            className="modern-select"
+                                            disabled={formData.role === 'admin'}
+                                        >
+                                            <option value="">No Manager</option>
+                                            {managers
+                                                .map(manager => (
+                                                    <option key={manager.id} value={manager.id}>
+                                                        {manager.name} ({manager.role})
+                                                    </option>
+                                                ))
+                                            }
+                                        </Form.Select>
+                                        {isAdmin() && (
+                                            <Form.Text className="text-muted">
+                                                As admin, you can assign any manager to this user.
+                                            </Form.Text>
+                                        )}
+                                    </Form.Group>
+                                </Col>
+                            </Row>
+
+                            {formData.role === 'admin' && (
+                                <Alert variant="info" className="modern-alert">
+                                    <i className="fas fa-info-circle me-2"></i>
+                                    Admin users cannot have a manager assigned.
+                                </Alert>
+                            )}
+                        </Modal.Body>
+                        <Modal.Footer className="modern-modal-footer">
+                            <Button
+                                variant="outline-secondary"
+                                onClick={() => setShowCreateModal(false)}
+                                disabled={formLoading}
+                                className="modern-btn-secondary"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="primary"
+                                type="submit"
+                                disabled={formLoading || !passwordValidation.isValid}
+                                className="modern-btn-primary"
+                            >
+                                {formLoading ? (
+                                    <>
+                                        <Spinner
+                                            as="span"
+                                            animation="border"
+                                            size="sm"
+                                            role="status"
+                                            className="me-2"
+                                        />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FaPencil className="me-2" />
+                                        Create User
+                                    </>
+                                )}
+                            </Button>
+                        </Modal.Footer>
+                    </Form>
+                </Modal>
 
                 {/* Edit User Modal */}
                 <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg" className="modern-modal">
@@ -408,18 +682,6 @@ const UserList = () => {
                                             onChange={handleInputChange}
                                             className="modern-input"
                                             required
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label className="modern-label">Username</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="username"
-                                            value={formData.username}
-                                            onChange={handleInputChange}
-                                            className="modern-input"
                                         />
                                     </Form.Group>
                                 </Col>

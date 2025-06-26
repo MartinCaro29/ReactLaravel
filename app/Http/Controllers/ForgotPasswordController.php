@@ -114,44 +114,83 @@ class ForgotPasswordController extends Controller
      */
     public function resetPassword(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'token' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed', // includes new_password_confirmation
-        ]);
+        // Check if user is authenticated
+        $isAuthenticated = Auth::check();
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Invalid request data.',
-                'errors' => $validator->errors()
-            ], 400);
-        }
+        if ($isAuthenticated) {
+            // For authenticated users, we don't need email or token validation
+            $validator = Validator::make($request->all(), [
+                'new_password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'confirmed',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+                ],
+            ], [
+                'new_password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            ]);
 
-        $user = User::where('email', $request->email)->first();
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Invalid request data.',
+                    'errors' => $validator->errors()
+                ], 400);
+            }
 
-        if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
-        }
+            $user = Auth::user();
+        } else {
+            // For non-authenticated users, validate email and token
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'token' => 'required|string',
+                'new_password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'confirmed',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+                ],
+            ], [
+                'new_password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            ]);
 
-        $resetToken = PasswordResetToken::where('email', $request->email)
-            ->where('token', $request->token)
-            ->first();
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Invalid request data.',
+                    'errors' => $validator->errors()
+                ], 400);
+            }
 
-        if (!$resetToken) {
-            return response()->json(['message' => 'Kodi i verifikimit është i pavlefshëm.'], 400);
-        }
+            $user = User::where('email', $request->email)->first();
 
-        if ($resetToken->isExpired()) {
-            $resetToken->delete();
-            return response()->json(['message' => 'Token has expired.'], 400);
+            if (!$user) {
+                return response()->json(['message' => 'User not found.'], 404);
+            }
+
+            // Skip token validation if it's "auth" (for authenticated users)
+            if ($request->token !== 'auth') {
+                $resetToken = PasswordResetToken::where('email', $request->email)
+                    ->where('token', $request->token)
+                    ->first();
+
+                if (!$resetToken) {
+                    return response()->json(['message' => 'Kodi i verifikimit është i pavlefshëm.'], 400);
+                }
+
+                if ($resetToken->isExpired()) {
+                    $resetToken->delete();
+                    return response()->json(['message' => 'Token has expired.'], 400);
+                }
+
+                // Delete the token after successful validation
+                $resetToken->delete();
+            }
         }
 
         // Update user's password
         $user->password = Hash::make($request->new_password);
         $user->save();
-
-        // Delete the token after successful reset
-        $resetToken->delete();
 
         return response()->json([
             'message' => 'Password successfully updated.',
