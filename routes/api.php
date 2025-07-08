@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\WorkerTimeController;
 
 // Public routes (no authentication required)
 Route::post('/register', [AuthController::class, 'register']);
@@ -27,4 +28,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/users/{id}', [UserController::class, 'updateUser']);
     Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
     Route::get('/managers', [UserController::class, 'getManagers']);
+
+    Route::get('/worker-time/stats', [WorkerTimeController::class, 'getWorkerStats']);
+    Route::get('/worker-time/summary', [WorkerTimeController::class, 'getSummaryStats']);
+    Route::get('/worker-time/{username}/export', [WorkerTimeController::class, 'exportWorkerData']); // Optional
 });

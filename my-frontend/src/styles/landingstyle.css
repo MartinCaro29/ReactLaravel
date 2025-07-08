@@ -278,7 +278,7 @@ body {
     font-weight: 700;
     color: var(--white);
     margin-bottom: 1rem;
-    background: linear-gradient(135deg, var(--white), var(--mint-light));
+    background: linear-gradient(135deg, var(--white), #0eb49a);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -494,6 +494,10 @@ body {
 .testimonial-card .card-body {
     padding: 2rem;
     text-align: center;
+    display: flex;
+    min-height: 380px;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .stars {

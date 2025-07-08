@@ -11,6 +11,7 @@ import LandingPage from "./components/LandingPage";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import AuthRedirect from "./components/AuthRedirect";
+import WorkerTimeList from "./components/WorkerTimeList";
 
 const App = () => {
 
@@ -40,6 +41,13 @@ const App = () => {
                 <Route path="/dashboard" element={
                     <ProtectedRoute>
                         <UserList />
+
+                    </ProtectedRoute>
+                } />
+
+                <Route path="/workers" element={
+                    <ProtectedRoute>
+                        <WorkerTimeList />
 
                     </ProtectedRoute>
                 } />

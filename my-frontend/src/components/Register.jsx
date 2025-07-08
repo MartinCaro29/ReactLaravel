@@ -44,7 +44,7 @@ const Register = () => {
             await api.post('/api/resend-verification', {
                 email: newUser.email,
             });
-            setResendSuccess('Kodi i verifikimit u ridërgua me sukses!');
+            setResendSuccess('Verification code resent successfully!');
             setCountdown(60);
             setTimeout(() => setResendSuccess(''), 3000);
         } catch (err) {
@@ -52,7 +52,7 @@ const Register = () => {
             if (err.response?.status === 400) {
                 setError(err.response.data);
             } else {
-                setError('Gabim gjatë ridërgimit të kodit. Ju lutemi provoni përsëri.');
+                setError('Error resending code. Please try again.');
             }
         }
     };
@@ -82,25 +82,25 @@ const Register = () => {
         setIsRegistering(true);
 
         if (!agreedTerms) {
-            handleError("Ju lutemi pranoni kushtet e shërbimit për të vazhduar.");
+            handleError("Please accept the terms of service to continue.");
             setIsRegistering(false);
             return;
         }
 
         if (!newUser.name || !newUser.email || !newUser.password || !newUser.confirmPassword) {
-            handleError('Të gjitha fushat janë të detyrueshme');
+            handleError('All fields are required');
             setIsRegistering(false);
             return;
         }
 
         if (newUser.password !== newUser.confirmPassword) {
-            handleError('Fjalëkalimet nuk përputhen');
+            handleError('Passwords do not match');
             setIsRegistering(false);
             return;
         }
 
         if (newUser.password.length < 8 || !validatePassword(newUser.password)) {
-            handleError('Fjalëkalimi duhet të jetë të paktën 8 karaktere i gjatë, të përmbajë një shkronjë të madhe dhe një karakter special.');
+            handleError('Password must be at least 8 characters long, contain one uppercase letter and one special character.');
             setIsRegistering(false);
             return;
         }
@@ -122,7 +122,7 @@ const Register = () => {
             if (err.response?.status === 400) {
                 handleError(err.response.data);
             } else {
-                handleError('Gabim gjatë regjistrimit. Ju lutemi provoni përsëri.');
+                handleError('Error during registration. Please try again.');
             }
         } finally {
             setIsRegistering(false);
@@ -140,7 +140,7 @@ const Register = () => {
             });
 
             setAlert('success');
-            setError('Email-i u verifikua me sukses! Po ridrejtoheni në faqen e hyrjes...');
+            setError('Email verified successfully! Redirecting to login page...');
 
             setTimeout(() => {
                 navigate('/login');
@@ -149,13 +149,13 @@ const Register = () => {
         } catch (err) {
             if (err.response?.status === 400) {
                 const errorMsg =
-                    err.response.data === 'Token not found or expired.' ? 'Kodi i verifikimit nuk u gjet ose ka skaduar.' :
-                        err.response.data === 'Token has expired.' ? 'Kodi i verifikimit ka skaduar.' :
-                            err.response.data === 'Invalid token.' ? 'Kodi i verifikimit është i pavlefshëm.' :
-                                'Kodi i verifikimit është i pasaktë ose ka skaduar.';
+                    err.response.data === 'Token not found or expired.' ? 'Verification code not found or expired.' :
+                        err.response.data === 'Token has expired.' ? 'Verification code has expired.' :
+                            err.response.data === 'Invalid token.' ? 'Verification code is invalid.' :
+                                'Verification code is incorrect or expired.';
                 handleError(errorMsg);
             } else {
-                handleError('Gabim gjatë verifikimit. Ju lutemi provoni përsëri.');
+                handleError('Error during verification. Please try again.');
             }
         } finally {
             setIsVerifying(false);
@@ -191,12 +191,12 @@ const Register = () => {
 
                             {/* Title */}
                             <h2 className="auth-title text-center mb-4">
-                                {step === 'register' ? 'Krijoni llogarinë tuaj' : 'Verifikoni Email-in'}
+                                {step === 'register' ? 'Create Your Account' : 'Verify Your Email'}
                             </h2>
 
                             {step === 'register' && (
                                 <p className="auth-subtitle text-center mb-4">
-                                    Filloni udhëtimin tuaj me ne
+                                    Start your journey with us
                                 </p>
                             )}
 
@@ -205,13 +205,13 @@ const Register = () => {
                                     <Row>
                                         <Col md={6}>
                                             <Form.Group className="mb-3">
-                                                <Form.Label className="auth-label">Emri i përdoruesit</Form.Label>
+                                                <Form.Label className="auth-label">Username</Form.Label>
                                                 <Form.Control
                                                     type="text"
                                                     name="name"
                                                     value={newUser.name}
                                                     onChange={handleChange}
-                                                    placeholder="Shkruani emrin tuaj"
+                                                    placeholder="Enter your name"
                                                     className="auth-input"
                                                     size="lg"
                                                 />
@@ -225,7 +225,7 @@ const Register = () => {
                                                     name="email"
                                                     value={newUser.email}
                                                     onChange={handleChange}
-                                                    placeholder="Shkruani email-in tuaj"
+                                                    placeholder="Enter your email"
                                                     className="auth-input"
                                                     size="lg"
                                                 />
@@ -236,14 +236,14 @@ const Register = () => {
                                     <Row>
                                         <Col md={6}>
                                             <Form.Group className="mb-3">
-                                                <Form.Label className="auth-label">Fjalëkalimi</Form.Label>
+                                                <Form.Label className="auth-label">Password</Form.Label>
                                                 <div className="password-input-wrapper">
                                                     <Form.Control
                                                         type={showPassword ? 'text' : 'password'}
                                                         name="password"
                                                         value={newUser.password}
                                                         onChange={handleChange}
-                                                        placeholder="Shkruani fjalëkalimin"
+                                                        placeholder="Enter password"
                                                         className="auth-input"
                                                         size="lg"
                                                     />
@@ -256,19 +256,19 @@ const Register = () => {
                                                     </button>
                                                 </div>
                                                 <Form.Text className="text-muted small">
-                                                    Të paktën 8 karaktere, 1 shkronjë e madhe, 1 karakter special
+                                                    At least 8 characters, 1 uppercase letter, 1 special character
                                                 </Form.Text>
                                             </Form.Group>
                                         </Col>
                                         <Col md={6}>
                                             <Form.Group className="mb-3">
-                                                <Form.Label className="auth-label">Konfirmo fjalëkalimin</Form.Label>
+                                                <Form.Label className="auth-label">Confirm Password</Form.Label>
                                                 <Form.Control
                                                     type={showPassword ? 'text' : 'password'}
                                                     name="confirmPassword"
                                                     value={newUser.confirmPassword}
                                                     onChange={handleChange}
-                                                    placeholder="Konfirmoni fjalëkalimin"
+                                                    placeholder="Confirm password"
                                                     className="auth-input"
                                                     size="lg"
                                                 />
@@ -282,13 +282,13 @@ const Register = () => {
                                             id="agree-terms"
                                             label={
                                                 <span>
-                                                    Unë pranoj{' '}
+                                                    I agree to the{' '}
                                                     <a href="/terms" className="auth-link" target="_blank">
-                                                        kushtet e shërbimit
+                                                        terms of service
                                                     </a>{' '}
-                                                    dhe{' '}
+                                                    and{' '}
                                                     <a href="/privacy" className="auth-link" target="_blank">
-                                                        politikën e privatësisë
+                                                        privacy policy
                                                     </a>
                                                 </span>
                                             }
@@ -314,17 +314,17 @@ const Register = () => {
                                                     role="status"
                                                     className="me-2"
                                                 />
-                                                Duke u regjistruar...
+                                                Registering...
                                             </>
                                         ) : (
-                                            'Regjistrohu'
+                                            'Sign Up'
                                         )}
                                     </Button>
 
                                     <p className="text-center auth-footer-text">
-                                        Jeni të regjistruar tashmë?{' '}
+                                        Already registered?{' '}
                                         <a href="/login" className="auth-link fw-bold">
-                                            Hyni këtu
+                                            Sign in here
                                         </a>
                                     </p>
                                 </Form>
@@ -336,18 +336,18 @@ const Register = () => {
                                             <i className="fas fa-envelope-open"></i>
                                         </div>
                                         <p className="verification-text">
-                                            Kemi dërguar një kod verifikimi në <strong>{newUser.email}</strong>
+                                            We've sent a verification code to <strong>{newUser.email}</strong>
                                         </p>
                                     </div>
 
                                     <Form onSubmit={handleVerifyEmail}>
                                         <Form.Group className="mb-4">
-                                            <Form.Label className="auth-label">Kodi i Verifikimit</Form.Label>
+                                            <Form.Label className="auth-label">Verification Code</Form.Label>
                                             <Form.Control
                                                 type="text"
                                                 value={verificationCode}
                                                 onChange={(e) => setVerificationCode(e.target.value)}
-                                                placeholder="Shkruani kodin 6-shifror"
+                                                placeholder="Enter 6-digit code"
                                                 className="auth-input text-center"
                                                 size="lg"
                                                 maxLength="6"
@@ -370,10 +370,10 @@ const Register = () => {
                                                         role="status"
                                                         className="me-2"
                                                     />
-                                                    Duke verifikuar...
+                                                    Verifying...
                                                 </>
                                             ) : (
-                                                'Verifiko Email-in'
+                                                'Verify Email'
                                             )}
                                         </Button>
 
@@ -384,7 +384,7 @@ const Register = () => {
                                             className="w-100 mb-3"
                                             size="lg"
                                         >
-                                            {countdown > 0 ? `Ridërgo kodin (${countdown}s)` : 'Ridërgo kodin'}
+                                            {countdown > 0 ? `Resend code (${countdown}s)` : 'Resend code'}
                                         </Button>
 
                                         <div className="text-center">
@@ -394,7 +394,7 @@ const Register = () => {
                                                 onClick={() => setStep('register')}
                                             >
                                                 <i className="fas fa-arrow-left me-2"></i>
-                                                Kthehu te regjistrimi
+                                                Back to registration
                                             </button>
                                         </div>
                                     </Form>

@@ -150,12 +150,12 @@ const Login = () => {
 
                             {/* Title */}
                             <h2 className="auth-title text-center mb-4">
-                                {step === 'login' ? 'Mirë se erdhët përsëri' : 'Verifikoni Email-in'}
+                                {step === 'login' ? 'Welcome Back' : 'Verify Your Email'}
                             </h2>
 
                             {step === 'login' && (
                                 <p className="auth-subtitle text-center mb-4">
-                                    Hyni në llogarinë tuaj për të vazhduar
+                                    Sign in to your account to continue
                                 </p>
                             )}
 
@@ -169,21 +169,21 @@ const Login = () => {
                                             name="email"
                                             value={userLog.email}
                                             onChange={handleChange}
-                                            placeholder="Shkruani email-in tuaj"
+                                            placeholder="Enter your email"
                                             className="auth-input"
                                             size="lg"
                                         />
                                     </Form.Group>
 
                                     <Form.Group className="mb-3">
-                                        <Form.Label className="auth-label">Fjalëkalimi</Form.Label>
+                                        <Form.Label className="auth-label">Password</Form.Label>
                                         <div className="password-input-wrapper">
                                             <Form.Control
                                                 type={showPassword ? 'text' : 'password'}
                                                 name="password"
                                                 value={userLog.password}
                                                 onChange={handleChange}
-                                                placeholder="Shkruani fjalëkalimin tuaj"
+                                                placeholder="Enter your password"
                                                 className="auth-input"
                                                 size="lg"
                                             />
@@ -201,19 +201,19 @@ const Login = () => {
                                         <Form.Check
                                             type="checkbox"
                                             id="remember-me"
-                                            label="Më mbaj mend"
+                                            label="Remember me"
                                             checked={rememberMe}
                                             onChange={() => setRememberMe(!rememberMe)}
                                             className="auth-checkbox"
                                         />
                                         <a href="/forgotpassword" className="auth-link">
-                                            Harruat fjalëkalimin?
+                                            Forgot password?
                                         </a>
                                     </div>
 
                                     <Button
                                         variant="primary"
-                                        type="submit"
+                                        onClick={handleSubmit}
                                         size="lg"
                                         className="auth-btn w-100 mb-3"
                                         disabled={loading}
@@ -227,17 +227,17 @@ const Login = () => {
                                                     role="status"
                                                     className="me-2"
                                                 />
-                                                Duke u kyçur...
+                                                Signing in...
                                             </>
                                         ) : (
-                                            'Hyr'
+                                            'Sign In'
                                         )}
                                     </Button>
 
                                     <p className="text-center auth-footer-text">
-                                        Nuk keni një llogari?{' '}
+                                        Don't have an account?{' '}
                                         <a href="/register" className="auth-link fw-bold">
-                                            Regjistrohuni këtu
+                                            Sign up here
                                         </a>
                                     </p>
                                 </Form>
@@ -249,18 +249,18 @@ const Login = () => {
                                             <i className="fas fa-envelope-open"></i>
                                         </div>
                                         <p className="verification-text">
-                                            Kemi dërguar një kod verifikimi në <strong>{userLog.email}</strong>
+                                            We've sent a verification code to <strong>{userLog.email}</strong>
                                         </p>
                                     </div>
 
                                     <Form onSubmit={handleVerifyEmail}>
                                         <Form.Group className="mb-4">
-                                            <Form.Label className="auth-label">Kodi i Verifikimit</Form.Label>
+                                            <Form.Label className="auth-label">Verification Code</Form.Label>
                                             <Form.Control
                                                 type="text"
                                                 value={verificationCode}
                                                 onChange={(e) => setVerificationCode(e.target.value)}
-                                                placeholder="Shkruani kodin 6-shifror"
+                                                placeholder="Enter 6-digit code"
                                                 className="auth-input text-center"
                                                 size="lg"
                                                 maxLength="6"
@@ -283,10 +283,10 @@ const Login = () => {
                                                         role="status"
                                                         className="me-2"
                                                     />
-                                                    Duke verifikuar...
+                                                    Verifying...
                                                 </>
                                             ) : (
-                                                'Verifiko Email-in'
+                                                'Verify Email'
                                             )}
                                         </Button>
 
@@ -297,7 +297,7 @@ const Login = () => {
                                             className="w-100 mb-3"
                                             size="lg"
                                         >
-                                            {countdown > 0 ? `Ridërgo kodin (${countdown}s)` : 'Ridërgo kodin'}
+                                            {countdown > 0 ? `Resend code (${countdown}s)` : 'Resend code'}
                                         </Button>
 
                                         <div className="text-center">
@@ -307,7 +307,7 @@ const Login = () => {
                                                 onClick={() => setStep('login')}
                                             >
                                                 <i className="fas fa-arrow-left me-2"></i>
-                                                Kthehu te hyrja
+                                                Back to login
                                             </button>
                                         </div>
                                     </Form>

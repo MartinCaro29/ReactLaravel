@@ -39,30 +39,13 @@ const Navigation = () => {
                                 <span>Dashboard</span>
                             </Nav.Link>
                         )}
-                        <Nav.Link className="nav-link-custom" href="/team">
-                            <span>Team</span>
-                        </Nav.Link>
-                        <Nav.Link className="nav-link-custom" href="/projects">
-                            <span>Projects</span>
-                        </Nav.Link>
-                        {(isAdmin() || isManager()) && (
-                            <Nav.Link className="nav-link-custom" href="/users">
-                                <FaUsers className="me-1" />
-                                <span>User Management</span>
-                            </Nav.Link>
-                        )}
+
                     </Nav>
 
                     <Nav className="align-items-center">
                         {user ? (
                             <>
-                                {/* Notifications */}
-                                <Nav.Item className="me-3">
-                                    <div className="notification-bell">
-                                        <FaBell className="bell-icon" />
-                                        <Badge bg="danger" className="notification-badge">3</Badge>
-                                    </div>
-                                </Nav.Item>
+
 
                                 {/* User Dropdown */}
                                 <Dropdown align="end">
@@ -87,10 +70,6 @@ const Navigation = () => {
 
                                         <Dropdown.Divider />
 
-                                        <Dropdown.Item href="/profile" className="dropdown-item-custom">
-                                            <FaUser className="me-2" />
-                                            Profile
-                                        </Dropdown.Item>
 
                                         <Dropdown.Item href="/forgotpassword" className="dropdown-item-custom">
                                             <FaCog className="me-2" />

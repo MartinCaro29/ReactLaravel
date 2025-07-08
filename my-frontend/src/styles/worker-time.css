@@ -1,0 +1,215 @@
+/* Worker Time Management Styles */
+
+.worker-main-row {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+}
+
+.worker-main-row:hover {
+    background-color: #e9ecef;
+}
+
+.expand-btn {
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+}
+
+.expand-btn:hover {
+    transform: scale(1.1);
+}
+
+.breakdown-container {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin: 10px;
+    overflow: hidden;
+}
+
+.breakdown-section {
+    padding: 20px;
+}
+
+.breakdown-title {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.breakdown-table {
+    margin-bottom: 0;
+}
+
+.breakdown-table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.year-row {
+    background-color: #f1f3f4;
+    border-left: 3px solid #17a2b8;
+}
+
+.year-row:hover {
+    background-color: #e2e6ea;
+}
+
+.month-breakdown {
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    margin: 8px 15px;
+    overflow: hidden;
+}
+
+.month-table {
+    margin-bottom: 0;
+}
+
+.month-table th {
+    background-color: #e3f2fd;
+    border-top: none;
+    font-weight: 600;
+    color: #1976d2;
+    font-size: 0.85rem;
+}
+
+.month-row {
+    background-color: #f3e5f5;
+    border-left: 3px solid #ffc107;
+}
+
+.month-row:hover {
+    background-color: #e1bee7;
+}
+
+.day-breakdown {
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    margin: 6px 10px;
+    overflow: hidden;
+}
+
+.day-table {
+    margin-bottom: 0;
+}
+
+.day-table th {
+    background-color: #fff3e0;
+    border-top: none;
+    font-weight: 600;
+    color: #f57c00;
+    font-size: 0.8rem;
+}
+
+.day-row {
+    background-color: #fafafa;
+}
+
+.day-row:hover {
+    background-color: #f5f5f5;
+}
+
+.day-row:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.day-row:nth-child(even):hover {
+    background-color: #f0f0f0;
+}
+
+/* Modern table improvements */
+.modern-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.modern-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #fff;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+    padding: 12px 8px;
+}
+
+.modern-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #f1f3f4;
+    vertical-align: middle;
+}
+
+/* Stats cards specific for worker time */
+.stats-card .stats-icon.total {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stats-card .stats-icon.verified {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stats-card .stats-icon.admin {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.stats-card .stats-icon.manager {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+/* Loading states */
+.loading-container {
+    padding: 100px 0;
+}
+
+.spinner-mint {
+    color: #20c997;
+}
+
+/* Badge customizations */
+.badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Hover effects for interactive elements */
+.table-responsive {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .breakdown-container {
+        margin: 5px;
+    }
+
+    .breakdown-section {
+        padding: 15px;
+    }
+
+    .modern-table td,
+    .modern-table th {
+        padding: 8px 4px;
+        font-size: 0.85rem;
+    }
+
+    .day-table th,
+    .day-table td {
+        padding: 6px 4px;
+        font-size: 0.8rem;
+    }
+}
+

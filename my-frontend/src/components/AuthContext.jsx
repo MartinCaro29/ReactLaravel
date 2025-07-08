@@ -119,7 +119,7 @@ export const AuthProvider = ({ children }) => {
             setUserWithStorage(null);
             if (err.response) {
                 setError(err.response.data.error || 'Login failed');
-                throw err.response.data;
+                throw err;
             }
             throw err;
         } finally {

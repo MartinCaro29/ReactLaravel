@@ -336,7 +336,7 @@ const UserList = () => {
                             <FaUsers className="text-muted mb-3" size={48} />
                             <h4>Access Denied</h4>
                             <p className="text-muted">You don't have permission to access user management.</p>
-                            <Button variant="primary" href="/dashboard">Go to Dashboard</Button>
+                            <Button variant="primary" href="/">Go to Home Page</Button>
                         </Card.Body>
                     </Card>
                 </Container>
@@ -377,14 +377,12 @@ const UserList = () => {
                             <p className="page-subtitle">Manage users, roles, and permissions</p>
                         </div>
                         <div className="header-actions">
-                            <Button variant="outline-primary" className="me-2">
-                                <FaDownload className="me-2" />
-                                Export
-                            </Button>
-                            <Button variant="primary" onClick={handleCreateUser}>
-                                <FaPlus className="me-2" />
-                                Add User
-                            </Button>
+                            {isAdmin() && (
+                                <Button variant="primary" onClick={handleCreateUser}>
+                                    <FaPlus className="me-2" />
+                                    Add User
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
